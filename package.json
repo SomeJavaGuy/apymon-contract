@@ -1,0 +1,45 @@
+{
+  "name": "egg",
+  "version": "1.0.0",
+  "description": "Egg NFT",
+  "main": "truffle-config.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "prettier": "pretty-quick --pattern \"**/*.*(js|jsx)\"",
+    "prettier:solidity": "./node_modules/.bin/prettier --write contracts/**/*.sol"
+  },
+  "repository": {
+    "type": "git"
+  },
+  "keywords": [
+    "ethereum",
+    "solidity",
+    "erc20"
+  ],
+  "author": "",
+  "license": "GPL-3.0",
+  "dependencies": {
+    "bignumber.js": "^9.0.1",
+    "truffle": "^5.2.4",
+    "bignumber": "^1.1.0",
+    "ethereumjs-testrpc": "^6.0.3",
+    "fs": "0.0.1-security",
+    "truffle-contract": "^4.0.31",
+    "truffle-hdwallet-provider": "^1.0.17",
+    "web3": "^1.3.0"
+  },
+  "devDependencies": {
+    "prettier": "^2.2.1",
+    "prettier-plugin-solidity": "^1.0.0-beta.6",
+    "pretty-quick": "^3.0.2",
+    "solhint": "^3.3.4",
+    "solhint-plugin-prettier": "0.0.5",
+    "@nomiclabs/buidler": "^1.4.8",
+    "@truffle/hdwallet-provider": "^1.2.0",
+    "dotenv": "^8.2.0",
+    "truffle-plugin-verify": "^0.5.7"
+  }
+}

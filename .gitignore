@@ -1,0 +1,6 @@
+node_modules/
+contracts/artifacts/
+build/
+start.sh
+package-lock.json
+.env
