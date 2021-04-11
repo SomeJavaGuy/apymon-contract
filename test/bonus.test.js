@@ -34,19 +34,17 @@ contract("APYMON", async (accounts) => {
         const amount = new BigNumber(await instanceMon.getMintableCount());
         const ethValue =  price.times(amount);
 
-        await instanceMon.mintEggs(accounts[i], amount.toString(10), ZERO_ADDRESS, {
-          from: accounts[i],
+        await instanceMon.mintEggs(accounts[0], amount.toString(10), ZERO_ADDRESS, {
+          from: accounts[0],
           value: ethValue.toString(10)
         });
-        const balance = new BigNumber(await instanceMon.balanceOf(accounts[i]));
-        assert.equal(balance.toString(10), amount.toString(10));
         totalEthValue = totalEthValue.plus(ethValue);
         totalAmount = totalAmount.plus(amount);
       }
 
       await instanceMon.pauseSale();
 
-      await instanceMon.distributeBonus(0, 1);
+      await instanceMon.distributeBonus(0, 39);
       for (let i = 0; i < 40; i++) {
         await instancePack.openEgg(i);
         const erc20Token = await instancePack.getERC20Tokens(i);

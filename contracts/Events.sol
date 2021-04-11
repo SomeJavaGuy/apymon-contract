@@ -117,7 +117,7 @@ contract Events {
         uint256 inId,
         uint256 inAmount,
         address outToken,
-        address outId,
+        uint256 outId,
         address indexed to
     );
 }

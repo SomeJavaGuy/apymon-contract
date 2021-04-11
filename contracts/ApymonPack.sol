@@ -10,6 +10,7 @@ import './Ownable.sol';
 
 interface IERC20 {
     function balanceOf(address account) external view returns (uint256);
+    function approve(address spender, uint256 amount) external returns (bool);
     function transfer(address recipient, uint256 amount) external returns (bool);
     function transferFrom(address sender, address recipient, uint256 amount) external returns (bool);
 }
@@ -18,10 +19,13 @@ interface IERC721 {
     function ownerOf(uint256 tokenId) external view returns (address owner);
     function totalSupply() external view returns (uint256);
     function exists(uint256 tokenId) external view returns (bool);
+    function approve(address to, uint256 tokenId) external;
     function safeTransferFrom(address from, address to, uint256 tokenId) external;
+    function mintCreature(uint256 eggId) external;
 }
 
 interface IERC1155 {
+    function setApprovalForAll(address operator, bool approved) external;
     function safeTransferFrom(
         address from,
         address to,
@@ -54,7 +58,7 @@ interface ISwap {
         uint256 inId,
         uint256 inAmount,
         address outToken,
-        address outId,
+        uint256 outId,
         string memory router,
         address to
     ) external;
@@ -71,6 +75,8 @@ contract ApymonPack is ERC165, IERC1155Receiver, IERC721Receiver, Context, Event
     uint8 private constant TOKEN_TYPE_ERC20 = 1;
     uint8 private constant TOKEN_TYPE_ERC721 = 2;
     uint8 private constant TOKEN_TYPE_ERC1155 = 3;
+
+    uint256 private constant MAX_EGG_SUPPLY = 6400;
 
     // Mapping from egg ID -> token(erc20, erc721) -> balance
     mapping(uint256 => mapping(address => uint256)) private _insideTokenBalances;
@@ -126,6 +132,25 @@ contract ApymonPack is ERC165, IERC1155Receiver, IERC721Receiver, Context, Event
     /**
      * @dev check if egg has been locked.
      */
+    function existsId(
+        uint256 eggId,
+        address token,
+        uint256 id
+    ) public view returns (bool) {
+        uint256[] memory ids = _insideTokenIds[eggId][token];
+
+        for (uint256 i; i < ids.length; i++) {
+            if (ids[i] == id) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @dev check if egg has been locked.
+     */
     function isLocked(
         uint256 eggId
     ) external view returns (bool locked, uint256 endTime) {
@@ -147,6 +172,15 @@ contract ApymonPack is ERC165, IERC1155Receiver, IERC721Receiver, Context, Event
         uint256 eggId
     ) public view returns (bool) {
         return _opened[eggId];
+    }
+
+    /**
+     * @dev check if claimed creature for certain egg.
+     */
+    function isClaimedCreature(
+        uint256 eggId
+    ) public view returns (bool) {
+        return _apymon.exists(eggId + MAX_EGG_SUPPLY);
     }
 
     /**
@@ -310,7 +344,7 @@ contract ApymonPack is ERC165, IERC1155Receiver, IERC721Receiver, Context, Event
     function lockEgg(
         uint256 eggId,
         uint256 timeInSeconds
-    ) external onlyEggOwner(eggId) unlocked(eggId) {
+    ) external onlyEggOwner(eggId) opened(eggId) unlocked(eggId) {
         _lockedTimestamp[eggId] = block.timestamp + timeInSeconds;
         emit LockedEgg(
             eggId,
@@ -332,13 +366,18 @@ contract ApymonPack is ERC165, IERC1155Receiver, IERC721Receiver, Context, Event
      * @dev open egg.
      */
     function openEgg(
-        uint256 eggId
+        uint256 eggId,
+        bool isClaimCreature
     ) external onlyEggOwner(eggId) {
         _opened[eggId] = true;
         emit OpenedEgg(
             eggId,
             msg.sender
         );
+
+        if (isClaimCreature && !isClaimedCreature(eggId)) {
+            claimCreature(eggId);
+        }
     }
 
     /**
@@ -362,7 +401,7 @@ contract ApymonPack is ERC165, IERC1155Receiver, IERC721Receiver, Context, Event
         uint256 eggId,
         address[] memory tokens,
         uint256[] memory amounts
-    ) external onlyEggOwner(eggId) {
+    ) external {
         require(
             tokens.length > 0 &&
             tokens.length == amounts.length
@@ -441,6 +480,7 @@ contract ApymonPack is ERC165, IERC1155Receiver, IERC721Receiver, Context, Event
         uint256[] memory amounts,
         uint256 toEggId
     ) public onlyEggOwner(fromEggId) unlocked(fromEggId) opened(fromEggId) {
+        require(fromEggId != toEggId);
         require(
             tokens.length > 0 &&
             tokens.length == amounts.length
@@ -481,10 +521,14 @@ contract ApymonPack is ERC165, IERC1155Receiver, IERC721Receiver, Context, Event
         uint256 eggId,
         address token,
         uint256[] memory tokenIds
-    ) external onlyEggOwner(eggId) {
+    ) external {
         require(token != address(0));
 
         for (uint256 i; i < tokenIds.length; i++) {
+            require(
+                token != address(this) ||
+                (token == address(this) && eggId != tokenIds[i])
+            );
             IERC721 iToken = IERC721(token);
             
             iToken.safeTransferFrom(
@@ -569,6 +613,7 @@ contract ApymonPack is ERC165, IERC1155Receiver, IERC721Receiver, Context, Event
         uint256[] memory tokenIds,
         uint256 toEggId
     ) public onlyEggOwner(fromEggId) unlocked(fromEggId) opened(fromEggId) {
+        require(fromEggId != toEggId);
         require(token != address(0));
         require(_apymon.exists(toEggId));
 
@@ -617,7 +662,7 @@ contract ApymonPack is ERC165, IERC1155Receiver, IERC721Receiver, Context, Event
         address token,
         uint256[] memory tokenIds,
         uint256[] memory amounts
-    ) public onlyEggOwner(eggId) {
+    ) external {
         require(token != address(0));
         IERC1155 iToken = IERC1155(token);
 
@@ -717,6 +762,7 @@ contract ApymonPack is ERC165, IERC1155Receiver, IERC721Receiver, Context, Event
         uint256[] memory amounts,
         uint256 toEggId
     ) public onlyEggOwner(fromEggId) unlocked(fromEggId) opened(fromEggId) {
+        require(fromEggId != toEggId);
         require(token != address(0));
         require(_apymon.exists(toEggId));
 
@@ -825,7 +871,6 @@ contract ApymonPack is ERC165, IERC1155Receiver, IERC721Receiver, Context, Event
         uint256 fromEggId,
         uint256 toEggId
     ) external {
-        require(_apymon.exists(toEggId));
         (
             address[] memory erc20Addresses,
             uint256[] memory erc20Balances
@@ -896,34 +941,32 @@ contract ApymonPack is ERC165, IERC1155Receiver, IERC721Receiver, Context, Event
     }
 
     /**
-     * @dev external function to deposit creatures into eggs
-     * Must be called by only owner after finished sale
+     * @dev external function to put creature into egg
+     * Must be called by egg owner
      */
-    function depositCreaturesIntoEggs(
-        uint256 startEggId,
-        uint256 endEggId
-    ) external onlyOwner {
-        uint256 eggSupply = _apymon.totalSupply() / 2;
-        for (uint256 i = startEggId; i <= endEggId; i++) {
-            _putInsideTokenId(
-                i,
-                address(_apymon),
-                i + eggSupply
-            );
+    function claimCreature(
+        uint256 eggId
+    ) public onlyEggOwner(eggId) {
+        _apymon.mintCreature(eggId);
 
-            _increaseInsideTokenBalance(
-                i,
-                TOKEN_TYPE_ERC721,
-                address(_apymon),
-                1
-            );
-            emit DepositedErc721IntoEgg(
-                i,
-                address(this),
-                address(_apymon),
-                i + eggSupply
-            );
-        }
+        _putInsideTokenId(
+            eggId,
+            address(_apymon),
+            eggId + MAX_EGG_SUPPLY
+        );
+
+        _increaseInsideTokenBalance(
+            eggId,
+            TOKEN_TYPE_ERC721,
+            address(_apymon),
+            1
+        );
+        emit DepositedErc721IntoEgg(
+            eggId,
+            address(this),
+            address(_apymon),
+            eggId + MAX_EGG_SUPPLY
+        );
     }
 
     function swapErc20(
@@ -933,8 +976,12 @@ contract ApymonPack is ERC165, IERC1155Receiver, IERC721Receiver, Context, Event
         address outToken,
         string memory router,
         address to
-    ) external onlyEggOwner(eggId) unlocked(eggId) {
+    ) external onlyEggOwner(eggId) unlocked(eggId) opened(eggId) {
         require(address(_swap) != address(0));
+        require(_insideTokenBalances[eggId][inToken] >= inAmount);
+
+        IERC20(inToken).approve(address(_swap), inAmount);
+
         _swap.swapErc20(
             eggId,
             inToken,
@@ -951,6 +998,13 @@ contract ApymonPack is ERC165, IERC1155Receiver, IERC721Receiver, Context, Event
             outToken,
             to
         );
+
+        _decreaseInsideTokenBalance(
+            eggId,
+            TOKEN_TYPE_ERC20,
+            inToken,
+            inAmount
+        );
     }
 
     function swapErc721(
@@ -960,8 +1014,12 @@ contract ApymonPack is ERC165, IERC1155Receiver, IERC721Receiver, Context, Event
         address outToken,
         string memory router,
         address to
-    ) external onlyEggOwner(eggId) unlocked(eggId) {
+    ) external onlyEggOwner(eggId) unlocked(eggId) opened(eggId) {
         require(address(_swap) != address(0));
+        require(existsId(eggId, inToken, inId));
+        
+        IERC721(inToken).approve(address(_swap), inId);
+
         _swap.swapErc721(
             eggId,
             inToken,
@@ -978,6 +1036,19 @@ contract ApymonPack is ERC165, IERC1155Receiver, IERC721Receiver, Context, Event
             outToken,
             to
         );
+
+        _popInsideTokenId(
+            eggId,
+            inToken,
+            inId
+        );
+
+        _decreaseInsideTokenBalance(
+            eggId,
+            TOKEN_TYPE_ERC721,
+            inToken,
+            1
+        );
     }
 
     function swapErc1155(
@@ -986,11 +1057,18 @@ contract ApymonPack is ERC165, IERC1155Receiver, IERC721Receiver, Context, Event
         uint256 inId,
         uint256 inAmount,
         address outToken,
-        address outId,
+        uint256 outId,
         string memory router,
         address to
-    ) external onlyEggOwner(eggId) unlocked(eggId) {
+    ) external onlyEggOwner(eggId) unlocked(eggId) opened(eggId) {
         require(address(_swap) != address(0));
+        require(existsId(eggId, inToken, inId));
+        require(
+            _insideERC1155TokenBalances[eggId][inToken][inId] >= inAmount
+        );
+
+        IERC1155(inToken).setApprovalForAll(address(_swap), true);
+
         _swap.swapErc1155(
             eggId,
             inToken,
@@ -1010,6 +1088,25 @@ contract ApymonPack is ERC165, IERC1155Receiver, IERC721Receiver, Context, Event
             outToken,
             outId,
             to
+        );
+
+        _decreaseInsideERC1155TokenBalance(
+            eggId,
+            inToken,
+            inId,
+            inAmount
+        );
+
+        _popInsideTokenIdForERC1155(
+            eggId,
+            inToken,
+            inId
+        );
+
+        _popERC1155FromEgg(
+            eggId,
+            inToken,
+            inId
         );
     }
 

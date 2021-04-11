@@ -22,7 +22,7 @@ interface IApymonPack {
 contract Apymon is ERC721, Ownable {
     using SafeMath for uint256;
 
-    string public constant APYMON_PROVENANCE = "df760c771ad006eace0d705383b74158967e78c6e980b35f670249b5822c42e1";
+    string public APYMON_PROVENANCE = "";
 
     // Maximum amount of Eggs in existance. Ever.
     uint256 public constant MAX_EGG_SUPPLY = 6400;
@@ -51,6 +51,20 @@ contract Apymon is ERC721, Ownable {
 
     function exists(uint256 tokenId) public view returns (bool) {
         return _exists(tokenId);
+    }
+
+    function tokensOfOwner(address _owner) external view returns(uint256[] memory) {
+        uint256 tokenCount = balanceOf(_owner);
+        if (tokenCount == 0) {
+            // Return an empty array
+            return new uint256[](0);
+        } else {
+            uint256[] memory result = new uint256[](tokenCount);
+            for (uint256 index; index < tokenCount; index++) {
+                result[index] = tokenOfOwnerByIndex(_owner, index);
+            }
+            return result;
+        }
     }
 
     /**
@@ -94,46 +108,52 @@ contract Apymon is ERC721, Ownable {
         }
     }
 
-    function distributeBonus(
-        uint256 startEggId,
-        uint256 endEggId
+    function getRandomNumber(uint256 a, uint256 b) public view returns (uint256) {
+        uint256 min = a;
+        uint256 max = (b.add(1)).sub(min);
+        return (uint256(uint256(keccak256(abi.encodePacked(blockhash(block.number))))%max)).add(min);
+    }
+
+    function distributeRandomBonus(
+        uint8 tier
     ) external onlyOwner {
         require(
             !hasSaleStarted,
             "Sale hasn't finised yet."
         );
-        uint256 totalBonus;
-        uint256 bonus;
-        
-        for (uint256 i = startEggId; i <= endEggId; i++) {
-            if (i > 6395) { // 6396 ~ 6400
-                bonus = 0.3 ether;
-            } else if (i > 6300) { // 6301 ~ 6395
-                bonus = 0.1 ether;
-            } else if (i > 6000) { // 6001 ~ 6300
-                bonus = 0.09 ether;
-            } else if (i > 5000) { // 5001 ~ 6000
-                bonus = 0.064 ether;
-            } else if (i > 3000) { // 3001 ~ 5000
-                bonus = 0.032 ether;
-            } else if (i > 1000) { // 1001 ~ 3000
-                bonus = 0.016 ether;
-            } else {
-                bonus = 0.008 ether; // 1 ~ 1000
-            }
 
+        uint256 randomId;
+
+        if (tier == 1) {
+            randomId = getRandomNumber(0, 999);
+        } else if (tier == 2) {
+            randomId = getRandomNumber(1000, 2999);
+        } else if (tier == 3) {
+            randomId = getRandomNumber(3000, 4999);
+        } else if (tier == 4) {
+            randomId = getRandomNumber(5000, 5999);
+        } else if (tier == 5) {
+            randomId = getRandomNumber(6000, 6299);
+        } else if (tier == 6) {
+            randomId = getRandomNumber(6300, 6394);
+        } else if (tier == 7) {
+            randomId = getRandomNumber(6395, 6399);
+        } else {
+            return;
+        }
+
+        uint256 bonus = getRandomNumber(0, 1E18);
+        
+        if (bonus > 0) {
             _apymonpack.increaseInsideTokenBalance(
-                i,
+                randomId,
                 1, // TOKEN_TYPE_ERC20
                 address(_weth),
                 bonus
             );
 
-            totalBonus = totalBonus.add(bonus);
-        }
-        if (totalBonus > 0) {
-            _weth.deposit{ value: totalBonus }();
-            _weth.transfer(address(_apymonpack), totalBonus);
+            _weth.deposit{ value: bonus }();
+            _weth.transfer(address(_apymonpack), bonus);
         }
     }
 
@@ -179,11 +199,11 @@ contract Apymon is ERC721, Ownable {
     * @dev Set apymon pack address
     */
     function setApymonPack(address apymonpack) onlyOwner external {
-       require(
-           address(_apymonpack) == address(0),
-           "Setting have done already"
-        );
        _apymonpack = IApymonPack(apymonpack);
+    }
+
+    function setProvenance(string memory _provenance) onlyOwner external {
+        APYMON_PROVENANCE = _provenance;
     }
 
     /**
@@ -213,7 +233,7 @@ contract Apymon is ERC721, Ownable {
             _safeMint(to, mintIndex);
         }
 
-        if (referee != address(0)) {
+        if (referee != address(0) && referee != to) {
             _addReferralAmount(referee, to, msg.value);
         }
     }
@@ -222,22 +242,18 @@ contract Apymon is ERC721, Ownable {
      * @dev Mints creature to apymonpacks.
      * Creatures must be distributed to owners of egg.
      */
-    function mintCreatures(
-        uint256 count
-    ) external onlyOwner {
-        require(
-            count > 0 &&
-            SafeMath.add(totalSupply(), count) <= MAX_APYMON_SUPPLY,
-            "Invalid count to mint."
-        );
+    function mintCreature(
+        uint256 eggId
+    ) external {
+        require(msg.sender == address(_apymonpack));
+        require(eggId < MAX_EGG_SUPPLY);
         require(
             !hasSaleStarted,
             "Sale hasn't finised yet."
         );
-        for (uint256 i; i < count; i++) {
-            uint256 mintIndex = totalSupply();
-            _safeMint(address(_apymonpack), mintIndex);
-        }
+        uint256 creatureId = eggId + MAX_EGG_SUPPLY;
+        require(!_exists(creatureId));
+        _safeMint(address(_apymonpack), creatureId);
     }
 
     /**
