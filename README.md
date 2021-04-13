@@ -1,5 +1,15 @@
 # Apymon
 
+## Introduction
+Welcome to Apymon; a decentralized NFT-based collectors experience built on the Ethereum network. Open your Genesis Egg, discover what’s inside, trade your way up and win amazing prizes.
+
+Apymon are lab-grown creatures made by beings from another dimension who experiment with the DNA of all creatures they encounter such as Apes, Aliens, Cats and many more. Apymon are contained within egg-shaped artifacts and no creature nor egg is the same. The supply is limited at 6400 Genesis Eggs, and there is something which makes these NFTs extra special.
+
+Do you have what it takes?
+Visit [Official site](https://apymon.com/) to find out.
+
+## How to start?
+
 This project utilizes [Truffle Suite](https://www.trufflesuite.com/) to automate testing.
 
 You will need to install [Truffle](https://www.trufflesuite.com/truffle):
@@ -46,3 +56,15 @@ or
 ```
 truffle test ./test/erc20.test.js
 ```
+
+## Resources
+Material related to our project is available via the following links:
+
+[Medium](https://medium.com/@apymon)
+[Twitter](https://twitter.com/ApymonOfficial)
+[Discord](https://discord.gg/K2PQnsJR7h)
+[Telegram](https://telegram.org/@ApymonOfficial)
+
+## AMON token
+
+We are going to build AMON token for Apymon holders, and you can check our plan [here](https://apymon.com/amon).
