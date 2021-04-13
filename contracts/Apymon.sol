@@ -27,6 +27,7 @@ contract Apymon is ERC721, Ownable {
     // Maximum amount of Eggs in existance. Ever.
     uint256 public constant MAX_EGG_SUPPLY = 6400;
     uint256 public constant MAX_APYMON_SUPPLY = 12800;
+    uint256 public CREATURE_SUPPLY;
     
     // Referral management
     mapping(address => uint256) public _referralAmounts;
@@ -35,11 +36,15 @@ contract Apymon is ERC721, Ownable {
     IApymonPack public _apymonpack;
 
     ERC20Interface private constant _weth = ERC20Interface(
-        0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2
+        // 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2 // mainnet
+        0xc778417E063141139Fce010982780140Aa0cD5Ab // rinkeby
     );
 
     address payable private constant _team = payable(
         0x23F40f52b2171A81355eA8fea03Fa8F0FbB0Dd68
+    );
+    address payable private constant _treasury = payable(
+        0xeD2D1254e79835bF5911Aa8946e23bf508477Da4
     );
     bool public hasSaleStarted = false;
 
@@ -71,7 +76,7 @@ contract Apymon is ERC721, Ownable {
     * @dev Gets egg count to mint per once.
     */
     function getMintableCount() public view returns (uint256) {
-        uint256 eggSupply = totalSupply();
+        uint256 eggSupply = totalSupply() - CREATURE_SUPPLY;
 
         if (eggSupply > MAX_EGG_SUPPLY) {
             return 0;
@@ -87,7 +92,7 @@ contract Apymon is ERC721, Ownable {
     }
 
     function getEggPrice() public view returns (uint256) {
-        uint256 eggSupply = totalSupply();
+        uint256 eggSupply = totalSupply() - CREATURE_SUPPLY;
 
         if (eggSupply >= MAX_EGG_SUPPLY) {
             return 0;
@@ -214,6 +219,7 @@ contract Apymon is ERC721, Ownable {
         uint256 count,
         address referee
     ) public payable {
+        uint256 eggSupply = totalSupply() - CREATURE_SUPPLY;
         require(
             hasSaleStarted,
             "Sale hasn't started."
@@ -222,14 +228,14 @@ contract Apymon is ERC721, Ownable {
             count > 0 && count <= getMintableCount()
         );
         require(
-            SafeMath.add(totalSupply(), count) <= MAX_EGG_SUPPLY
+            SafeMath.add(eggSupply, count) <= MAX_EGG_SUPPLY
         );
         require(
             SafeMath.mul(getEggPrice(), count) == msg.value
         );
 
         for (uint256 i; i < count; i++) {
-            uint256 mintIndex = totalSupply();
+            uint256 mintIndex = totalSupply() - CREATURE_SUPPLY;
             _safeMint(to, mintIndex);
         }
 
@@ -242,29 +248,27 @@ contract Apymon is ERC721, Ownable {
      * @dev Mints creature to apymonpacks.
      * Creatures must be distributed to owners of egg.
      */
-    function mintCreature(
-        uint256 eggId
-    ) external {
+    function mintCreature() external returns (uint256 creatureId) {
         require(msg.sender == address(_apymonpack));
-        require(eggId < MAX_EGG_SUPPLY);
         require(
             !hasSaleStarted,
             "Sale hasn't finised yet."
         );
-        uint256 creatureId = eggId + MAX_EGG_SUPPLY;
+        creatureId = MAX_EGG_SUPPLY + CREATURE_SUPPLY;
         require(!_exists(creatureId));
         _safeMint(address(_apymonpack), creatureId);
+        CREATURE_SUPPLY++;
     }
 
     /**
      * @dev send eth to team and treasury.
      */
-    function requestTeamFund(
+    function requestFund(
         uint256 amount
     ) external onlyOwner {
         uint256 teamFund = amount.div(2);
         _team.transfer(teamFund);
-        payable(msg.sender).transfer(amount.sub(teamFund));
+        _treasury.transfer(amount.sub(teamFund));
     }
 
     function startSale() public onlyOwner {

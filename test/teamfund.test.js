@@ -35,7 +35,7 @@ contract("APYMON", async (accounts) => {
         const finalRaisedEth = new BigNumber(await web3.eth.getBalance(instance.address));
         assert.equal(raisedEth.toString(10), finalRaisedEth.toString(10));
         
-        await instance.requestTeamFund(finalRaisedEth.toString(10));
+        await instance.requestFund(finalRaisedEth.toString(10));
 
         const teamBalance = new BigNumber(await web3.eth.getBalance(TEAM_ADDRESS));
         assert.equal(teamBalance.toString(10), finalRaisedEth.div(new BigNumber(2)).toString(10));
