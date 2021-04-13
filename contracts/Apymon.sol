@@ -36,12 +36,11 @@ contract Apymon is ERC721, Ownable {
     IApymonPack public _apymonpack;
 
     ERC20Interface private constant _weth = ERC20Interface(
-        // 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2 // mainnet
-        0xc778417E063141139Fce010982780140Aa0cD5Ab // rinkeby
+        0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2 // mainnet
     );
 
     address payable private constant _team = payable(
-        0x23F40f52b2171A81355eA8fea03Fa8F0FbB0Dd68
+        0x262655a65538C71454Cb60951BF1a79E19668218
     );
     address payable private constant _treasury = payable(
         0xeD2D1254e79835bF5911Aa8946e23bf508477Da4
@@ -78,14 +77,12 @@ contract Apymon is ERC721, Ownable {
     function getMintableCount() public view returns (uint256) {
         uint256 eggSupply = totalSupply() - CREATURE_SUPPLY;
 
-        if (eggSupply > MAX_EGG_SUPPLY) {
+        if (eggSupply >= MAX_EGG_SUPPLY) {
             return 0;
         } else if (eggSupply > 6395) { // 6396 ~ 6400
             return 1;
-        } else if (eggSupply > 6300) { // 6301 ~ 6395
+        } else if (eggSupply > 6000) { // 6001 ~ 6395
             return 5;
-        } else if (eggSupply > 6000) { // 6001 ~ 6300
-            return 10;
         } else {
             return 20; // 1 ~ 6000
         }
@@ -97,19 +94,19 @@ contract Apymon is ERC721, Ownable {
         if (eggSupply >= MAX_EGG_SUPPLY) {
             return 0;
         } else if (eggSupply > 6395) { // 6396 ~ 6400
-            return 3 ether;
-        } else if (eggSupply > 6300) { // 6301 ~ 6395
+            return 2 ether;
+        } else if (eggSupply > 6365) { // 6366 ~ 6395
             return 1 ether;
-        } else if (eggSupply > 6000) { // 6001 ~ 6300
-            return 0.9 ether;
-        } else if (eggSupply > 5000) { // 5001 ~ 6000
+        } else if (eggSupply > 6300) { // 6301 ~ 6365
             return 0.64 ether;
-        } else if (eggSupply > 3000) { // 3001 ~ 5000
+        } else if (eggSupply > 6000) { // 6001 ~ 6300
             return 0.32 ether;
-        } else if (eggSupply > 1000) { // 1001 ~ 3000
+        } else if (eggSupply > 4000) { // 4001 ~ 6000
             return 0.16 ether;
+        } else if (eggSupply > 500) { // 501 ~ 4000
+            return 0.08 ether;
         } else {
-            return 0.08 ether; // 1 ~ 1000
+            return 0.04 ether; // 1 ~ 500
         }
     }
 
@@ -130,17 +127,17 @@ contract Apymon is ERC721, Ownable {
         uint256 randomId;
 
         if (tier == 1) {
-            randomId = getRandomNumber(0, 999);
+            randomId = getRandomNumber(0, 499);
         } else if (tier == 2) {
-            randomId = getRandomNumber(1000, 2999);
+            randomId = getRandomNumber(500, 3999);
         } else if (tier == 3) {
-            randomId = getRandomNumber(3000, 4999);
+            randomId = getRandomNumber(4000, 5999);
         } else if (tier == 4) {
-            randomId = getRandomNumber(5000, 5999);
-        } else if (tier == 5) {
             randomId = getRandomNumber(6000, 6299);
+        } else if (tier == 5) {
+            randomId = getRandomNumber(6300, 6364);
         } else if (tier == 6) {
-            randomId = getRandomNumber(6300, 6394);
+            randomId = getRandomNumber(6365, 6394);
         } else if (tier == 7) {
             randomId = getRandomNumber(6395, 6399);
         } else {
