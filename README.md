@@ -63,8 +63,7 @@ Material related to our project is available via the following links:
 [Medium](https://medium.com/@apymon)
 [Twitter](https://twitter.com/ApymonOfficial)
 [Discord](https://discord.gg/K2PQnsJR7h)
-[Telegram](https://telegram.org/@ApymonOfficial)
 
 ## AMON token
 
-We are going to build AMON token for Apymon holders, and you can check our plan [here](https://apymon.com/amon).
+AMON governance token for Apymon holders, more details [here](https://apymon.com/amon).
